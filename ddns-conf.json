@@ -3,5 +3,6 @@
   "project_id": "fluffy-penguin-242411",
   "managed_zone": "example",
   "domain": "example.com",
-  "ttl": "60"
+  "ttl": 60,
+  "interval": 600
 }
