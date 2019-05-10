@@ -1,0 +1,5 @@
+googleapiclient
+google-api-python-client
+google-cloud-dns
+google-cloud
+requests
