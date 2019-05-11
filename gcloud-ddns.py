@@ -2,10 +2,11 @@ import time
 import sys
 import json
 import os
-from google.cloud import dns
-from google.auth import exceptions as googlexc
+from google.cloud import dns, exceptions as cloudexc
+from google.auth import exceptions as authexc
+from google.api_core import exceptions as corexc
 from requests import get
-from googleapiclient import discovery
+from googleapiclient import discovery, errors
 
 
 def main():
@@ -21,8 +22,8 @@ def main():
 
     # ensure that the provided credential file exists
     if not os.path.isfile(api_key):
-        print("Credential file note found. By default this program checks for ddns-api-key.json in this directory.")
-        print("The user can also provide as input the file location")
+        print("Credential file not found. By default this program checks for ddns-api-key.json in this directory.")
+        print("You can specify the path to the credentials as an argument to this script. ")
         print("Usage: python gcloud-ddns.py [path_to_api_credentials.json]")
         return 1
 
@@ -35,6 +36,7 @@ def main():
     try:
         with open(config_file, "r") as f:
             config_dict = json.load(f)
+
             project = config_dict["project_id"]
             managed_zone = config_dict["managed_zone"]
             domain = config_dict["domain"]
@@ -44,6 +46,10 @@ def main():
 
     except FileNotFoundError:
         print(f"Configuration file error. Expected {config_file} present in same directory as this script")
+        return 1
+    except KeyError as e:
+        print(f"The word {e} appears to be misspelt in the configuration file")
+        return 1
 
     # query the DNS API to check if we have a record set matching our host
     service = discovery.build("dns", "v1")
@@ -55,10 +61,10 @@ def main():
     # Note: Client() will pull the credentials from the on.environ from above
     try:
         client = dns.Client(project=project)
-    except googlexc.DefaultCredentialsError:
+    except authexc.DefaultCredentialsError:
         print("Provided credentials failed. Please ensure you have correct credentials.")
         return 1
-    except googlexc.GoogleAuthError:
+    except authexc.GoogleAuthError:
         print("Provided credentials failed. Please ensure you have correct credentials.")
         return 1
     zone = client.zone(managed_zone, domain)
@@ -73,6 +79,8 @@ def main():
             if response.status_code != 200:
                 print(f"ERROR: API request unsuccessful. Expected HTTP 200, got {response.status_code}")
                 time.sleep(interval)
+                # no point going further if we didn't get a valid response,
+                # but we also don't want to not try again later
                 continue
 
             ip = response.json()["ip"]
@@ -80,7 +88,14 @@ def main():
             # build the record set which we will submit
             record_set = {"name": host, "type": "A", "ttl": ttl, "rrdatas": [ip]}
 
-            response = request.execute()  # API call
+            try:
+                response = request.execute()  # API call
+            except errors.HttpError as e:
+                print(f"Access forbidden. You most likely have a configuration error. Full error: {e}")
+                return 1
+            except corexc.Forbidden as e:
+                print(f"Access forbidden. You most likely have a configuration error. Full error: {e}")
+                return 1
 
             # ensure that we got a valid response
             if response is not None and "rrsets" in response:
@@ -100,8 +115,10 @@ def main():
                         # to do this, we must first delete the current record, then create a new record
                         delete_record_set = dict(record_set)
                         delete_record_set["rrdatas"] = google_ip
+
                         print(f"Deleting record {delete_record_set}")
                         delete_entry(zone, delete_record_set)
+
                         print(f"Creating record {record_set}")
                         create_entry(zone, record_set)
 
