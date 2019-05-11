@@ -51,6 +51,11 @@ def main():
         print(f"The word {e} appears to be misspelt in the configuration file")
         return 1
 
+    # confirm that the last character of host is a '.'. This is a google requirement
+    if host[-1] != '.':
+        print(f"The host entry in the configuration file must end with a '.', e.g. www.example.com. ")
+        return 1
+
     # query the DNS API to check if we have a record set matching our host
     service = discovery.build("dns", "v1")
     request = service.resourceRecordSets().list(
@@ -67,6 +72,7 @@ def main():
     except authexc.GoogleAuthError:
         print("Provided credentials failed. Please ensure you have correct credentials.")
         return 1
+
     zone = client.zone(managed_zone, domain)
 
     # this is the program's main loop. Exit with ctl-c
@@ -80,9 +86,10 @@ def main():
                 print(f"ERROR: API request unsuccessful. Expected HTTP 200, got {response.status_code}")
                 time.sleep(interval)
                 # no point going further if we didn't get a valid response,
-                # but we also don't want to not try again later
+                # but we also want to try again later, show there be a temporary server issue with ipify.org
                 continue
 
+            # this is our public IP address.
             ip = response.json()["ip"]
 
             # build the record set which we will submit

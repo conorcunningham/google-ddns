@@ -4,15 +4,31 @@ This is a simple dynamic DNS script for Google Cloud DNS. The script will check 
 
 This project consists of the following components:
 
-- gcloud-ddns.py    : the dynamic dns client script
-- ddns-conf.json    : programs configuration file
-- requirements.txt  : requirements to be installed
+- **gcloud-ddns.py**: the dynamic dns client script
+- **ddns-conf.json**: programs configuration file
+- **requirements.txt**: requirements to be installed
 
-
-**Usage**: *python gcloud-ddns.py <path_to_configuration_file.json>*
+```bash
+Usage: python gcloud-ddns.py <path_to_configuration_file.json>
+```
 
 ### Authentication 
-In order to use the Google Cloud API, you will need an API key for your account. This key will be a json file. The script will check for a command line argument for the configuration file, but if none is given it will look for ddns.conf in the same directory as the script.
+In order to use the Google Cloud API, you will need an API key for your account. This key will be a json file. The script will check for a command line argument for the configuration file, but if none is given it will look for ddns-api-key.json in the same directory as the script.
+
+The script will set **GOOGLE_APPLICATION_CREDENTIALS** environmental variable to the path of your API key.
+
+```python
+# You can provide the API key as the first parameter
+    if len(sys.argv) == 2:
+        api_key = sys.argv[1]
+    elif len(sys.argv) > 2:
+        print("Usage: python gcloud-ddns.py [path_to_api_credentials.json]")
+        return 1
+    else:
+        api_key = "ddns-api-key.json"
+        
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = api_key
+```
 
 ### Configuration file
 The configuration for the script is read from a json file. Here are the contents of the example [ddns-conf.json](ddns-conf.json) file
@@ -39,7 +55,7 @@ config_file = "ddns-conf.json"
 - **interval**: How long the script will sleep before running again
 
 ### ipify.org API
-This project makes use of the snazzy [ipify.org](https://www.ipify.org) API.
+This project makes use of the snazzy [ipify.org](https://www.ipify.org) API for fetching the clients public IP address.
 
 ### Usage
 This program is free to all. Proper credit should be given if reusing. I am open to improvements and all constructive feedback.
