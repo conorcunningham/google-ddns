@@ -91,9 +91,8 @@ def main():
 
             # this is our public IP address.
             ip = response.json()["ip"]
-
             # build the record set which we will submit
-            record_set = {"name": host, "type": "A", "ttl": ttl, "rrdatas": [ip]}
+            record_set = {"name": host, "type": "A", "ttl": ttl, "rrdatas": [ip, ]}
 
             try:
                 response = request.execute()  # API call
@@ -105,10 +104,12 @@ def main():
                 return 1
 
             # ensure that we got a valid response
-            if response is not None and "rrsets" in response:
-                rrset = response["rrsets"][0]
-                google_ip = rrset["rrdatas"][0]
-                google_host = rrset["name"]
+            if response is not None and len(response['rrsets']) > 0:
+                rrset = response['rrsets'][0]
+                google_ip = rrset['rrdatas']
+                google_host = rrset['name']
+                google_ttl = rrset['ttl']
+                google_type = rrset['type']
                 print(f"h: {host} ip: {ip} gh: {rrset['name']} gip: {google_ip}")
 
                 # ensure that the record we received has the same name as the record we want to create
@@ -120,14 +121,18 @@ def main():
                     else:
                         # host record exists, but IPs are different. We need to update the record in the cloud
                         # to do this, we must first delete the current record, then create a new record
-                        delete_record_set = dict(record_set)
-                        delete_record_set["rrdatas"] = google_ip
 
-                        print(f"Deleting record {delete_record_set}")
-                        delete_entry(zone, delete_record_set)
+                        del_record_set = {"name": host,
+                                          "type": google_type,
+                                          "ttl": google_ttl,
+                                          "rrdatas": [google_ip, ]
+                                          }
+
+                        print(f"Deleting record {del_record_set}")
+                        dns_change(zone, del_record_set, 'delete')
 
                         print(f"Creating record {record_set}")
-                        create_entry(zone, record_set)
+                        dns_change(zone, record_set, 'create')
 
                 else:
                     # for whatever reason, the record returned from google doesn't match the host
@@ -135,13 +140,14 @@ def main():
                     print(
                         "ERROR: Configured hostname doesn't match hostname returned from google. No actions taken"
                     )
-
             else:
                 # response is None so we will create a DNS entry based on our config file
                 print(f"No record found. Creating a new record: {record_set}")
-                create_entry(zone, record_set)
+                dns_change(zone, record_set, 'create')
+
             # sleep for ten minutes (600 seconds)
             time.sleep(interval)
+
         # listen for ctl-c and exit if received
         except KeyboardInterrupt:
             print("\nCtl-c received. Goodbye!")
@@ -149,41 +155,35 @@ def main():
     return 0
 
 
-def create_entry(zone, rs):
-
-    # build the record set
+def dns_change(zone, rs, cmd):
+    # delete the record before we add the new one
+    change = zone.changes()
+    # build the record set to be deleted from rrset
     record_set = zone.resource_record_set(
         rs["name"], rs["type"], rs["ttl"], rs["rrdatas"]
     )
-    # update the IP of our A record
-    if zone.exists():
-        add_change = zone.changes()
-        add_change.add_record_set(record_set)
-        add_change.create()  # API request
+    if cmd == 'delete':
+        change.delete_record_set(record_set)
+        print("Deleting!!!!")
+    elif cmd == 'create':
+        change.add_record_set(record_set)
+        print("creating!!!")
+    else:
+        return
 
-        while add_change.status != "done":
-            print("Waiting for create record changes to complete")
-            time.sleep(30)  # or whatever interval is appropriate
-            add_change.reload()  # API request
-            print(f"Create Status: {add_change.status}")
-
-
-def delete_entry(zone, rs):
-    # delete the record before we add the new one
-    del_change = zone.changes()
-    # build the record set to be deleted from rrset
-    old_record_set = zone.resource_record_set(
-        rs["name"], rs["type"], rs["ttl"], rs["rrdatas"]
-    )
-    del_change.delete_record_set(old_record_set)
-    del_change.create()  # API request
+    try:
+        change.create()  # API request
+    except corexc.FailedPrecondition as e:
+        print(f"A precondition for the change failed. Most likely an error in your configuration file. Error: {e}")
+    except cloudexc.exceptions as e:
+        print(f"A cloudy error occurred. Error: {e}")
 
     # get and print status
-    while del_change.status != "done":
-        print("Waiting for delete changes to complete")
+    while change.status != "done":
+        print(f"Waiting for {cmd} changes to complete")
         time.sleep(10)  # or whatever interval is appropriate
-        del_change.reload()  # API request
-        print(f"Delete Status: {del_change.status}")
+        change.reload()  # API request
+        print(f"{cmd.title()} Status: {change.status}")
 
 
 if __name__ == "__main__":
