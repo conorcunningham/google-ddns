@@ -11,8 +11,18 @@ This project consists of the following components:
 ```bash
 Usage: python gcloud-ddns.py <path_to_configuration_file.json>
 ```
+## Requirements
+This script requires **Python 3.6 or greater**. F strings are extensively used. Package requirements are listed in [requirements.txt](requirements.txt)
 
-### Authentication 
+## Setup
+```bash
+$ git clone git@github.com:conorcunningham/google-ddns.git
+$ cd google-ddns
+$ python3 gcloud-ddns.py
+```
+The script will run in the foreground. I'm going to play around with it and test it to see if it can run reliably as a service.
+
+## Authentication 
 In order to use the Google Cloud API, you will need an API key for your account. This key will be a json file. The script will check for a command line argument for the configuration file, but if none is given it will look for ddns-api-key.json in the same directory as the script.
 
 The script will set **GOOGLE_APPLICATION_CREDENTIALS** environmental variable to the path of your API key.
@@ -30,7 +40,7 @@ The script will set **GOOGLE_APPLICATION_CREDENTIALS** environmental variable to
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = api_key
 ```
 
-### Configuration file
+## Configuration file
 The configuration for the script is read from a json file. Here are the contents of the example [ddns-conf.json](ddns-conf.json) file
 ``` json
 {
@@ -54,8 +64,8 @@ config_file = "ddns-conf.json"
 - **ttl**: The number of seconds for the TTL
 - **interval**: How long the script will sleep before running again
 
-### ipify.org API
+## ipify.org API
 This project makes use of the snazzy [ipify.org](https://www.ipify.org) API for fetching the clients public IP address.
 
-### Usage
-This program is free to all. Proper credit should be given if reusing. I am open to improvements and all constructive feedback.
+## TODO
+Migrate print() statements to better logging, i.e. to a file and add datetime output with the log entries.
