@@ -1,5 +1,5 @@
 {
-  "host": "firewall.example.com",
+  "host": "firewall.example.com.",
   "project_id": "fluffy-penguin-242411",
   "managed_zone": "example",
   "domain": "example.com",

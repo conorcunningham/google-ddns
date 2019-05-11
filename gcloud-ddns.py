@@ -106,7 +106,7 @@ def main():
             # ensure that we got a valid response
             if response is not None and len(response['rrsets']) > 0:
                 rrset = response['rrsets'][0]
-                google_ip = rrset['rrdatas']
+                google_ip = rrset['rrdatas'][0]
                 google_host = rrset['name']
                 google_ttl = rrset['ttl']
                 google_type = rrset['type']
