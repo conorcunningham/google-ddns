@@ -1,40 +1,38 @@
+""" A dynamic DNS client Google Cloud DDNS
+
+This script will, based on its configuration file, query the GCloud DNS API.
+It will create a Resource Record Set (RRSET)in GCloud if no such record
+exists that matches the configuration file. If a match is found, the script
+will check its host's current public IP address, and if it is found to be
+different than that in GCloud, will first delete the RRSET, then create a
+new RRSET.
+
+Every x seconds, as defined by the user with the variable interval, the script
+will repeat the process.
+
+"""
 import time
 import sys
 import json
 import os
+import logging
 from google.cloud import dns, exceptions as cloudexc
 from google.auth import exceptions as authexc
 from google.api_core import exceptions as corexc
-from requests import get
 from googleapiclient import discovery, errors
+from requests import get
 
 
 def main():
 
-    # You can provide the API key as the first parameter
+    # You can provide the config file as the first parameter
     if len(sys.argv) == 2:
-        api_key = sys.argv[1]
+        config_file = sys.argv[1]
     elif len(sys.argv) > 2:
-        print("Usage: python gcloud-ddns.py [path_to_api_credentials.json]")
+        print("Usage: python gcloud-ddns.py [path_to_config_file.json]")
         return 1
     else:
-        api_key = "ddns-api-key.json"
-
-    # ensure that the provided credential file exists
-    if not os.path.isfile(api_key):
-        print(
-            "Credential file not found. By default this program checks for ddns-api-key.json in this directory."
-        )
-        print(
-            "You can specify the path to the credentials as an argument to this script. "
-        )
-        print("Usage: python gcloud-ddns.py [path_to_api_credentials.json]")
-        return 1
-
-    # set OS environ for google authentication
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = api_key
-    # json config file for your Google Cloud DNS settings
-    config_file = "ddns-conf.json"
+        config_file = "ddns-config.json"
 
     # read config file settings
     try:
@@ -46,6 +44,8 @@ def main():
             host = config_dict["host"]
             ttl = config_dict["ttl"]
             interval = config_dict["interval"]
+            api_key = config_dict["api-key"]
+            logfile = config_dict["log-path"]
 
     except FileNotFoundError:
         print(
@@ -53,7 +53,10 @@ def main():
         )
         return 1
     except KeyError as e:
-        print(f"The word {e} appears to be misspelt in the configuration file")
+        print(
+            f"There is a configuration error. Check to see if the word {e} is misspelt,"
+            f" or in fact exists in the configuration file."
+        )
         return 1
 
     # confirm that the last character of host is a '.'. This is a google requirement
@@ -63,27 +66,51 @@ def main():
         )
         return 1
 
-    # query the DNS API to check if we have a record set matching our host
-    service = discovery.build("dns", "v1")
+    # ensure that the provided credential file exists
+    if not os.path.isfile(api_key):
+        print(
+            "Credential file not found. By default this program checks for ddns-api-key.json in this directory."
+        )
+        print(
+            "You can specify the path to the credentials as an argument to this script. "
+        )
+        print("Usage: python gcloud-ddns.py [path_to_config_file.json]")
+        return 1
+
+    logging.basicConfig(
+        level=logging.DEBUG,
+        filename=logfile,
+        filemode="w",
+        format="%(asctime)s - %(levelname)s - %(message)s",
+    )
+
+    # set OS environ for google authentication
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = api_key
+
+    # setup our objects that will be used to query the Google API
+    # N.B. cache_discover if false. This prevents google module exceptions
+    # This is not a performance critical script, so shouldn't be a problem.
+    service = discovery.build("dns", "v1", cache_discovery=False)
     request = service.resourceRecordSets().list(
         project=project, managedZone=managed_zone, name=host
     )
 
     # Use Google's dns.Client to create client object and zone object
-    # Note: Client() will pull the credentials from the on.environ from above
+    # Note: Client() will pull the credentials from the os.environ from above
     try:
         client = dns.Client(project=project)
     except authexc.DefaultCredentialsError:
-        print(
+        logging.error(
             "Provided credentials failed. Please ensure you have correct credentials."
         )
         return 1
     except authexc.GoogleAuthError:
-        print(
+        logging.error(
             "Provided credentials failed. Please ensure you have correct credentials."
         )
         return 1
 
+    # this is the object which will be sent to Google and queried by us.
     zone = client.zone(managed_zone, domain)
 
     # this is the program's main loop. Exit with ctl-c
@@ -94,28 +121,29 @@ def main():
 
             # check that we got a valid response. If not, sleep for interval and go to the top of the loop
             if response.status_code != 200:
-                print(
-                    f"ERROR: API request unsuccessful. Expected HTTP 200, got {response.status_code}"
+                logging.error(
+                    f"API request unsuccessful. Expected HTTP 200, got {response.status_code}"
                 )
                 time.sleep(interval)
                 # no point going further if we didn't get a valid response,
-                # but we also want to try again later, show there be a temporary server issue with ipify.org
+                # but we also want to try again later, should there be a temporary server issue with ipify.org
                 continue
 
             # this is our public IP address.
             ip = response.json()["ip"]
-            # build the record set which we will submit
+            # build the record set based on our configuration file
             record_set = {"name": host, "type": "A", "ttl": ttl, "rrdatas": [ip]}
 
+            # attempt to get the DNS information of our host from Google
             try:
                 response = request.execute()  # API call
             except errors.HttpError as e:
-                print(
+                logging.error(
                     f"Access forbidden. You most likely have a configuration error. Full error: {e}"
                 )
                 return 1
             except corexc.Forbidden as e:
-                print(
+                logging.error(
                     f"Access forbidden. You most likely have a configuration error. Full error: {e}"
                 )
                 return 1
@@ -127,17 +155,21 @@ def main():
                 google_host = rrset["name"]
                 google_ttl = rrset["ttl"]
                 google_type = rrset["type"]
-                print(f"h: {host} ip: {ip} gh: {rrset['name']} gip: {google_ip}")
+                logging.debug(
+                    f"config_h: {host} current_ip: {ip} g_host: {rrset['name']} g_ip: {google_ip}"
+                )
 
                 # ensure that the record we received has the same name as the record we want to create
                 if google_host == host:
-                    print("Config file host and google host record match")
+                    logging.info("Config file host and google host record match")
 
                     if google_ip == ip:
-                        print("IP and Host information match. Nothing to do here")
+                        logging.info(
+                            f"IP and Host information match. Nothing to do here. Going to sleep for {interval} seconds"
+                        )
                     else:
-                        # host record exists, but IPs are different. We need to update the record in the cloud
-                        # to do this, we must first delete the current record, then create a new record
+                        # host record exists, but IPs are different. We need to update the record in the cloud.
+                        # To do this, we must first delete the current record, then create a new record
 
                         del_record_set = {
                             "name": host,
@@ -146,27 +178,30 @@ def main():
                             "rrdatas": [google_ip],
                         }
 
-                        print(f"Deleting record {del_record_set}")
-                        dns_change(zone, del_record_set, "delete")
+                        logging.debug(f"Deleting record {del_record_set}")
+                        if not dns_change(zone, del_record_set, "delete"):
+                            logging.error(
+                                f"Failed to delete record set {del_record_set}"
+                            )
 
-                        print(f"Creating record {record_set}")
-                        dns_change(zone, record_set, "create")
+                        logging.debug(f"Creating record {record_set}")
+                        if not dns_change(zone, record_set, "create"):
+                            logging.error(f"Failed to create record set {record_set}")
 
                 else:
                     # for whatever reason, the record returned from google doesn't match the host
                     # we have configured in our config file. Exit and log
-                    print(
-                        "ERROR: Configured hostname doesn't match hostname returned from google. No actions taken"
+                    logging.error(
+                        "Configured hostname doesn't match hostname returned from google. No actions taken"
                     )
             else:
-                # response is None so we will create a DNS entry based on our config file
-                print(f"No record found. Creating a new record: {record_set}")
-                dns_change(zone, record_set, "create")
+                # response to our request returned no results, so we'll create a DNS record
+                logging.info(f"No record found. Creating a new record: {record_set}")
+                if not dns_change(zone, record_set, "create"):
+                    logging.error(f"Failed to create record set {record_set}")
 
-            # sleep for ten minutes (600 seconds)
             time.sleep(interval)
 
-        # listen for ctl-c and exit if received
         except KeyboardInterrupt:
             print("\nCtl-c received. Goodbye!")
             break
@@ -174,36 +209,51 @@ def main():
 
 
 def dns_change(zone, rs, cmd):
-    # delete the record before we add the new one
+    """ Function to create or delete a DNS record
+
+    :param zone: google.cloud.dns.zone.ManagedZone'
+            The zone which we are configuring in Google Cloud DNS
+    :param rs:  dict
+            Contains all the elements we need to create the record set to be submitted to the API
+    :param cmd: str
+            Either 'create' or 'delete'. This decides which action to take towards Google Cloud
+    :return: bool
+            True if we succeeded in a creation or deletion of a record set, otherwise False
+    """
+
     change = zone.changes()
-    # build the record set to be deleted from rrset
+    # build the record set to be deleted or created
     record_set = zone.resource_record_set(
         rs["name"], rs["type"], rs["ttl"], rs["rrdatas"]
     )
     if cmd == "delete":
         change.delete_record_set(record_set)
-        print("Deleting!!!!")
+        logging.debug(f"Deleting record set: {record_set}")
     elif cmd == "create":
         change.add_record_set(record_set)
-        print("creating!!!")
+        logging.debug(f"creating record set : {record_set}")
     else:
-        return
+        return False
 
     try:
         change.create()  # API request
     except corexc.FailedPrecondition as e:
-        print(
+        logging.error(
             f"A precondition for the change failed. Most likely an error in your configuration file. Error: {e}"
         )
+        return False
     except cloudexc.exceptions as e:
-        print(f"A cloudy error occurred. Error: {e}")
+        logging.error(f"A cloudy error occurred. Error: {e}")
+        return False
 
     # get and print status
     while change.status != "done":
-        print(f"Waiting for {cmd} changes to complete")
+        logging.info(f"Waiting for {cmd} changes to complete")
         time.sleep(10)  # or whatever interval is appropriate
         change.reload()  # API request
-        print(f"{cmd.title()} Status: {change.status}")
+        logging.info(f"{cmd.title()} Status: {change.status}")
+
+    return True
 
 
 if __name__ == "__main__":

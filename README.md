@@ -7,13 +7,12 @@ This project consists of the following components:
 - **gcloud-ddns.py**: the dynamic dns client script
 - **ddns-conf.json**: programs configuration file
 - **requirements.txt**: requirements to be installed
-
-```bash
-Usage: python gcloud-ddns.py <path_to_configuration_file.json>
-```
 ## Requirements
-This script requires **Python 3.6 or greater**. F strings are extensively used. Package requirements are listed in [requirements.txt](requirements.txt)
-
+This script requires **Python 3.6 or greater**. f-strings are extensively used. Package requirements are listed in [requirements.txt](requirements.txt)
+## Usage
+```bash
+Usage: python gcloud-ddns.py [path_to_configuration_file.json]
+```
 ## Setup
 ```bash
 $ git clone git@github.com:conorcunningham/google-ddns.git
@@ -21,27 +20,8 @@ $ cd google-ddns
 $ python3 gcloud-ddns.py
 ```
 The script will run in the foreground. I'm going to play around with it and test it to see if it can run reliably as a service.
-
-## Authentication 
-In order to use the Google Cloud API, you will need an API key for your account. This key will be a json file. The script will check for a command line argument for the configuration file, but if none is given it will look for ddns-api-key.json in the same directory as the script.
-
-The script will set **GOOGLE_APPLICATION_CREDENTIALS** environmental variable to the path of your API key.
-
-```python
-# You can provide the API key as the first parameter
-    if len(sys.argv) == 2:
-        api_key = sys.argv[1]
-    elif len(sys.argv) > 2:
-        print("Usage: python gcloud-ddns.py [path_to_api_credentials.json]")
-        return 1
-    else:
-        api_key = "ddns-api-key.json"
-        
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = api_key
-```
-
 ## Configuration file
-The configuration for the script is read from a json file. Here are the contents of the example [ddns-conf.json](ddns-conf.json) file
+The configuration for the script is read from a json file. Here are the contents of the example [ddns-conf.json](ddns-config.json) file
 ``` json
 {
   "host": "firewall.example.com.",
@@ -49,13 +29,13 @@ The configuration for the script is read from a json file. Here are the contents
   "managed_zone": "example",
   "domain": "example.com",
   "ttl": 60,
-  "interval": 600
+  "interval": 600,
+  "api-key": "./ddns-api-key.json",
+  "log-path": "./ddns.log"
 }
 ```
-Should you wish to change the name of the config file, you can edit it in the script
-```python
-config_file = "ddns-conf.json"
-```
+The script accepts one optional CLI argument which is the path to the configuration file. If none is given, the script will look for ```ddns-config.json``` in the same directory as the script.
+
 
 - **host**: the fully-qualified domain name of the host you want to set. *_NB_** You must include the . after the .com. This is a Google requirement/
 - **project_id**: Your project ID within Google Cloud
@@ -63,7 +43,17 @@ config_file = "ddns-conf.json"
 - **domain**: Your domain name
 - **ttl**: The number of seconds for the TTL
 - **interval**: How long the script will sleep before running again
+- **api-key**: Path to the API key in JSON format
+- **log-path**: Path to the logfile
 
+## Authentication 
+In order to use the Google Cloud API, you will need an API key for your account. This key will be a json file and must be configured in the configuration file.
+
+The script will set ```GOOGLE_APPLICATION_CREDENTIALS``` environmental variable to the path of your API key and Google's modules will use this environmental variable to handle authentication.
+
+```python        
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = api_key
+```
 ## ipify.org API
 This project makes use of the snazzy [ipify.org](https://www.ipify.org) API for fetching the clients public IP address.
 

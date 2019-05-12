@@ -4,5 +4,7 @@
   "managed_zone": "example",
   "domain": "example.com",
   "ttl": 60,
-  "interval": 600
+  "interval": 600,
+  "api-key": "./ddns-api-key.json",
+  "log-path": "./ddns.log"
 }
