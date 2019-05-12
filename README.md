@@ -56,6 +56,3 @@ os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = api_key
 ```
 ## ipify.org API
 This project makes use of the snazzy [ipify.org](https://www.ipify.org) API for fetching the clients public IP address.
-
-## TODO
-Migrate print() statements to better logging, i.e. to a file and add datetime output with the log entries.
