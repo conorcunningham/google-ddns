@@ -22,11 +22,6 @@ from google.api_core import exceptions as corexc
 from googleapiclient import discovery, errors
 from requests import get
 
-
-def testing():
-    return "we're testing!"
-
-
 CONFIG_PARAMS = ['project_id', 'managed_zone', 'host', 'ttl', 'interval']
 
 
@@ -115,6 +110,8 @@ def main():
                     )
                     return 1
 
+                # this is where we build our resource record set and what we will use to call the api
+                # further down in the script.
                 request = service.resourceRecordSets().list(
                     project=project, managedZone=managed_zone, name=host
                 )
