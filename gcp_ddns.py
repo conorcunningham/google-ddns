@@ -32,7 +32,7 @@ def main():
     if len(sys.argv) == 2:
         config_file = sys.argv[1]
     elif len(sys.argv) > 2:
-        print("Usage: python gcp_ddns.py [path_to_config_file.json]")
+        print("Usage: python gcp_ddns.py [path_to_config_file.yaml]")
         return 1
     else:
         config_file = "ddns-config.yaml"

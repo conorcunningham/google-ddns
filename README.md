@@ -5,13 +5,13 @@ This is a simple dynamic DNS script for Google Cloud DNS. The script will check 
 This project consists of the following components:
 
 - **gcloud-ddns.py**: the dynamic dns client script
-- **ddns-conf.json**: programs configuration file
+- **ddns-conf.yaml**: programs configuration file
 - **requirements.txt**: requirements to be installed
 ## Requirements
 This script requires **Python 3.6 or greater**. f-strings are extensively used. Package requirements are listed in [requirements.txt](requirements.txt)
 ## Usage
 ```bash
-Usage: python gcloud-ddns.py [path_to_configuration_file.json]
+Usage: python gcloud-ddns.py [path_to_configuration_file.yaml]
 ```
 ## Setup
 ```bash
@@ -21,20 +21,27 @@ $ python3 gcloud-ddns.py
 ```
 The script will run in the foreground. I'm going to play around with it and test it to see if it can run reliably as a service.
 ## Configuration file
-The configuration for the script is read from a json file. Here are the contents of the example [ddns-conf.json](ddns-config.json) file
-``` json
-{
-  "host": "firewall.example.com.",
-  "project_id": "fluffy-penguin-242411",
-  "managed_zone": "example",
-  "domain": "example.com",
-  "ttl": 60,
-  "interval": 600,
-  "api-key": "./ddns-api-key.json",
-  "log-path": "./ddns.log"
-}
+The configuration for the script is read from a yaml file. Here are the contents of the example [ddns-conf.yaml](ddns-config.yaml) file
+``` yaml
+api-key: './ddns-api-key.json'
+logfile: './ddns.log'
+hosts:
+    -   host: 'firewall.example.com.'
+        project_id: 'fluffy-penguin-242411'
+        managed_zone: 'example'
+        domain: 'example.com'
+        ttl: 60
+        interval: 600
+
+    -   host: 'www.example-two.com.'
+        project_id: 'fluffy-penguin-242411'
+        managed_zone: 'example-two'
+        domain: 'example-two.com'
+        ttl: 60
+        interval: 600
+
 ```
-The script accepts one optional CLI argument which is the path to the configuration file. If none is given, the script will look for ```ddns-config.json``` in the same directory as the script.
+The script accepts one optional CLI argument which is the path to the configuration file. If none is given, the script will look for ```ddns-config.yaml``` in the same directory as the script.
 
 
 - **host**: the fully-qualified domain name of the host you want to set. *_NB_** You must include the . after the .com. This is a Google requirement/
