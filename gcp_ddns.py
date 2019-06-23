@@ -14,6 +14,7 @@ will repeat the process.
 import time
 import sys
 import os
+import socket
 import yaml
 import logging
 from google.cloud import dns, exceptions as cloudexc
