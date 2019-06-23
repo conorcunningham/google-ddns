@@ -3,6 +3,12 @@
 
 I wrote this to solve an issue that I had at home, and it ended up saving me $100 USD a year. Thank you, Python! Thank you CS50! 
 
+I have opened sourced this project for all to use.
+
+Furthermore, this is deliberately a one file application. It is designed to be easy to clone and use, hence the open source, and it is designed to be used with a Linux service so that it can run in the background. It can theoretically be run on all platforms, MAC, Windows, Linux, embedded linux devices and home network equipment.
+
+I have tested this on Windows 10, Debian 9 Stretch and Max OSX Mojave.
+
 I've had a hoot taking CS50 Web and am currently working on my final project for CS50 Web.
 
 Cheers,
