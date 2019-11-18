@@ -16,6 +16,7 @@ import sys
 import os
 import yaml
 import logging
+import signal
 from google.cloud import dns, exceptions as cloudexc
 from google.auth import exceptions as authexc
 from google.api_core import exceptions as corexc
@@ -24,6 +25,11 @@ from requests import get
 
 CONFIG_PARAMS = ['project_id', 'managed_zone', 'host', 'ttl', 'interval']
 
+# This makes sure that SIGTERM signal is handled (for example from Docker)
+def handle_sigterm(*args):
+    raise KeyboardInterrupt()
+
+signal.signal(signal.SIGTERM, handle_sigterm)
 
 # noinspection PyUnboundLocalVariable
 def main():
