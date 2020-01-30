@@ -21,7 +21,7 @@ from google.cloud import dns, exceptions as cloudexc
 from google.auth import exceptions as authexc
 from google.api_core import exceptions as corexc
 from googleapiclient import discovery, errors
-from requests import get
+import requests
 
 CONFIG_PARAMS = ['project_id', 'managed_zone', 'host', 'ttl', 'interval']
 
@@ -116,6 +116,31 @@ def main():
                     )
                     return 1
 
+                # attempt to get IP address early on. This will help us determine
+                # if we have an internet connection. If we don't we should catch
+                # the exception, sleep and go to the top of the loop
+                # http get request to fetch our public IP address from ipify.org
+                # if it fails for whatever reason, sleep, and go back to the top of the loop
+                try:
+                    get_ip = requests.get("https://api.ipify.org?format=json")
+                except requests.exceptions.ConnectionError:
+                    logging.error(f"Timed out trying to reach api.ipify.org")
+                    time.sleep(interval)
+                    continue
+
+                # check that we got a valid response. If not, sleep for interval and go to the top of the loop
+                if get_ip.status_code != 200:
+                    logging.error(
+                        f"API request unsuccessful. Expected HTTP 200, got {get_ip.status_code}"
+                    )
+                    time.sleep(interval)
+                    # no point going further if we didn't get a valid response,
+                    # but we also want to try again later, should there be a temporary server issue with ipify.org
+                    continue
+
+                # this is our public IP address.
+                ip = get_ip.json()["ip"]
+
                 # this is where we build our resource record set and what we will use to call the api
                 # further down in the script.
                 request = service.resourceRecordSets().list(
@@ -139,27 +164,13 @@ def main():
 
                 # this is the object which will be sent to Google and queried by us.
                 zone = client.zone(managed_zone, domain)
-                # http get request to fetch our public IP address from ipify.org
-                response = get("https://api.ipify.org?format=json")
 
-                # check that we got a valid response. If not, sleep for interval and go to the top of the loop
-                if response.status_code != 200:
-                    logging.error(
-                        f"API request unsuccessful. Expected HTTP 200, got {response.status_code}"
-                    )
-                    time.sleep(interval)
-                    # no point going further if we didn't get a valid response,
-                    # but we also want to try again later, should there be a temporary server issue with ipify.org
-                    continue
-
-                # this is our public IP address.
-                ip = response.json()["ip"]
                 # build the record set based on our configuration file
                 record_set = {"name": host, "type": "A", "ttl": ttl, "rrdatas": [ip]}
 
                 # attempt to get the DNS information of our host from Google
                 try:
-                    response = request.execute()  # API call
+                    get_ip = request.execute()  # API call
                 except errors.HttpError as e:
                     logging.error(
                         f"Access forbidden. You most likely have a configuration error. Full error: {e}"
@@ -172,8 +183,8 @@ def main():
                     return 1
 
                 # ensure that we got a valid response
-                if response is not None and len(response["rrsets"]) > 0:
-                    rrset = response["rrsets"][0]
+                if get_ip is not None and len(get_ip["rrsets"]) > 0:
+                    rrset = get_ip["rrsets"][0]
                     google_ip = rrset["rrdatas"][0]
                     google_host = rrset["name"]
                     google_ttl = rrset["ttl"]
