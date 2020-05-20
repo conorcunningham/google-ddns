@@ -9,7 +9,7 @@ google-cloud==0.34.0
 google-cloud-core==1.2.0
 google-cloud-dns==0.31.0
 googleapis-common-protos==1.51.0
-httplib2==0.17.0
+httplib2==0.18.0
 idna==2.8
 protobuf==3.11.2
 pyasn1==0.4.8
