@@ -116,16 +116,16 @@ def main():
                 # http get request to fetch our public IP address from ipify.org
                 # if it fails for whatever reason, sleep, and go back to the top of the loop
                 try:
-                    get_ip = requests.get("https://api.ipify.org?format=json")
+                    current_ip = requests.get("https://api.ipify.org?format=json")
                 except requests.exceptions.ConnectionError:
                     logging.error(f"Timed out trying to reach api.ipify.org")
                     time.sleep(interval)
                     continue
 
                 # check that we got a valid response. If not, sleep for interval and go to the top of the loop
-                if get_ip.status_code != 200:
+                if current_ip.status_code != 200:
                     logging.error(
-                        f"API request unsuccessful. Expected HTTP 200, got {get_ip.status_code}"
+                        f"API request unsuccessful. Expected HTTP 200, got {gcp_record_set.status_code}"
                     )
                     time.sleep(interval)
                     # no point going further if we didn't get a valid response,
@@ -133,7 +133,7 @@ def main():
                     continue
 
                 # this is our public IP address.
-                ip = get_ip.json()["ip"]
+                ip = current_ip.json()["ip"]
 
                 # this is where we build our resource record set and what we will use to call the api
                 # further down in the script.
@@ -164,7 +164,7 @@ def main():
 
                 # attempt to get the DNS information of our host from Google
                 try:
-                    get_ip = request.execute()  # API call
+                    gcp_record_set = request.execute()  # API call
                 except errors.HttpError as e:
                     logging.error(
                         f"Access forbidden. You most likely have a configuration error. Full error: {e}"
@@ -177,8 +177,8 @@ def main():
                     return 1
 
                 # ensure that we got a valid response
-                if get_ip is not None and len(get_ip["rrsets"]) > 0:
-                    rrset = get_ip["rrsets"][0]
+                if gcp_record_set is not None and len(gcp_record_set["rrsets"]) > 0:
+                    rrset = gcp_record_set["rrsets"][0]
                     google_ip = rrset["rrdatas"][0]
                     google_host = rrset["name"]
                     google_ttl = rrset["ttl"]
