@@ -77,6 +77,31 @@ The script will set ```GOOGLE_APPLICATION_CREDENTIALS``` environmental variable 
 ```python        
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = api_key
 ```
+## Docker
+A Dockerfile is included in the repository so you can launch this as a container inside a Docker instance.
+```bash
+docker build -t google-ddns .
+```
+The default docker command expects a config.yaml file inside the /ddns directory
+```bash
+docker run -it --rm -v <path/to/config>:/ddns google-ddns
+```
+Keep in mind that the paths inside the config file are relative to the container
+```yaml
+api-key: '/ddns/ddns-api-key.json'
+logfile: '/ddns/ddns.log'
+...
+```
+Here's a quick-and-dirty docker-compose file if you use that
+```yaml
+version: '3'
+
+services:
+  ddns:
+    image: google-ddns
+    volumes:
+    - ./config:/ddns
+```
 ## ipify.org API
 This project makes use of the snazzy [ipify.org](https://www.ipify.org) API for fetching the clients public IP address.
 
