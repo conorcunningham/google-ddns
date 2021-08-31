@@ -25,11 +25,14 @@ import requests
 
 CONFIG_PARAMS = ['project_id', 'managed_zone', 'host', 'ttl', 'interval']
 
+
 # This makes sure that SIGTERM signal is handled (for example from Docker)
 def handle_sigterm(*args):
     raise KeyboardInterrupt()
 
+
 signal.signal(signal.SIGTERM, handle_sigterm)
+
 
 # noinspection PyUnboundLocalVariable
 def main():
@@ -47,7 +50,7 @@ def main():
     with open(config_file, 'r') as stream:
         try:
             config = yaml.safe_load(stream)
-            print(config)
+            # print(config)
             if 'api-key' in config:
                 api_key = config['api-key']
             else:
@@ -122,14 +125,19 @@ def main():
                 # http get request to fetch our public IP address from ipify.org
                 # if it fails for whatever reason, sleep, and go back to the top of the loop
                 try:
-                    current_ip = requests.get("https://api.ipify.org?format=json")
-                except requests.exceptions.ConnectionError:
-                    logging.error(f"Timed out trying to reach api.ipify.org")
+                    ipify_response = requests.get("https://api.ipify.org?format=json")
+                except requests.exceptions.ConnectionError as exc:
+                    logging.error(f"Timed out trying to reach api.ipify.org", exc_info=exc)
                     time.sleep(interval)
+                except requests.exceptions.RequestException as exc:
+                    logging.error(
+                        f"Requests error when trying to fetch current local IP. Exception: {exc}", 
+                        exc_info=exc
+                    )
                     continue
 
                 # check that we got a valid response. If not, sleep for interval and go to the top of the loop
-                if current_ip.status_code != 200:
+                if ipify_response.status_code != 200:
                     logging.error(
                         f"API request unsuccessful. Expected HTTP 200, got {gcp_record_set.status_code}"
                     )
@@ -139,7 +147,7 @@ def main():
                     continue
 
                 # this is our public IP address.
-                ip = current_ip.json()["ip"]
+                ip = ipify_response.json()["ip"]
 
                 # this is where we build our resource record set and what we will use to call the api
                 # further down in the script.
