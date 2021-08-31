@@ -50,7 +50,7 @@ def main():
     with open(config_file, 'r') as stream:
         try:
             config = yaml.safe_load(stream)
-            # print(config)
+            print(config)
             if 'api-key' in config:
                 api_key = config['api-key']
             else:
@@ -131,7 +131,7 @@ def main():
                     time.sleep(interval)
                 except requests.exceptions.RequestException as exc:
                     logging.error(
-                        f"Requests error when trying to fetch current local IP. Exception: {exc}", 
+                        f"Requests error when trying to fetch current local IP. Exception: {exc}",
                         exc_info=exc
                     )
                     continue
