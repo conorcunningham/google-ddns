@@ -37,11 +37,21 @@ signal.signal(signal.SIGTERM, handle_sigterm)
 # noinspection PyUnboundLocalVariable
 def main():
 
+    # initialize console logger
+    logging.getLogger().setLevel(logging.DEBUG)
+    
+    logFormatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+    
+    consoleHandler = logging.StreamHandler()
+    consoleHandler.setFormatter(logFormatter)
+    logging.getLogger().addHandler(consoleHandler)
+
+
     # You can provide the config file as the first parameter
     if len(sys.argv) == 2:
         config_file = sys.argv[1]
     elif len(sys.argv) > 2:
-        print("Usage: python gcp_ddns.py [path_to_config_file.yaml]")
+        logging.error("Usage: python gcp_ddns.py [path_to_config_file.yaml]")
         return 1
     else:
         config_file = "ddns-config.yaml"
@@ -50,43 +60,39 @@ def main():
     with open(config_file, 'r') as stream:
         try:
             config = yaml.safe_load(stream)
-            print(config)
+            logging.info(config)
             if 'api-key' in config:
                 api_key = config['api-key']
             else:
-                print(f"api_key must be defined in {config_file}")
+                logging.error(f"api_key must be defined in {config_file}")
                 exit(1)
 
             if 'logfile' in config:
                 logfile = config['logfile']
             else:
-                print(f"logfile must be defined in {config_file}")
+                logging.error(f"logfile must be defined in {config_file}")
                 exit(1)
 
             # iterate through our required config parameters and each host entry in the config file
             # check that all requisite parameters are included in the file before proceeding.
 
         except yaml.YAMLError:
-            print(f"There was an error loading configuration file: {config_file}")
+            logging.error(f"There was an error loading configuration file: {config_file}")
             exit(1)
 
     # ensure that the provided credential file exists
     if not os.path.isfile(api_key):
-        print(
-            "Credential file not found. By default this program checks for ddns-api-key.json in this directory."
+        logging.error(
+            "Credential file not found. By default this program checks for ddns-api-key.json in this directory.\n"
+            + "You can specify the path to the credentials as an argument to this script. "
+            + "Usage: python gcp_ddns.py [path_to_config_file.json]"
         )
-        print(
-            "You can specify the path to the credentials as an argument to this script. "
-        )
-        print("Usage: python gcp_ddns.py [path_to_config_file.json]")
         return 1
-
-    logging.basicConfig(
-        level=logging.DEBUG,
-        filename=logfile,
-        filemode="w",
-        format="%(asctime)s - %(levelname)s - %(message)s",
-    )
+    
+    # initialize file logger
+    fileHandler = logging.FileHandler(filename=logfile, mode="w")
+    fileHandler.setFormatter(logFormatter)
+    logging.getLogger().addHandler(fileHandler)
 
     # set OS environ for google authentication
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = api_key
@@ -102,7 +108,7 @@ def main():
             for count, config_host in enumerate(config['hosts'], start=1):
                 for key in CONFIG_PARAMS:
                     if key not in config_host:
-                        print(f"{key} not found in config file {config_file}. Please ensure it is.")
+                        logging.error(f"{key} not found in config file {config_file}. Please ensure it is.")
                         exit(1)
 
                 project = config_host["project_id"]
@@ -114,7 +120,7 @@ def main():
 
                 # confirm that the last character of host is a '.'. This is a google requirement
                 if host[-1] != ".":
-                    print(
+                    logging.error(
                         f"The host entry in the configuration file must end with a '.', e.g. www.example.com. "
                     )
                     return 1
@@ -250,7 +256,7 @@ def main():
                     time.sleep(interval)
 
         except KeyboardInterrupt:
-            print("\nCtl-c received. Goodbye!")
+            logging.error("\nCtl-c received. Goodbye!")
             break
     return 0
 
