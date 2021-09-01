@@ -1,8 +1,11 @@
 # Based on https://docs.github.com/en/actions/guides/publishing-docker-images
+# Deploys to https://github.com/features/packages 
+# Can be triggered manually, or by creating a Release
 
 name: Create & publish google-ddns Docker image to ghcr.io
 
 on:
+  workflow_dispatch:
   release:
     types: [published]
 
