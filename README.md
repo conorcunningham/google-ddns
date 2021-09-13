@@ -1,20 +1,3 @@
-# CS50 Final Project
-**N.B** This project requires the use of Google Cloud, and Google Cloud requires authentication. Specifically, in this project, and when using Google Cloud's DNS, one requires an API key. It is effectively free to use Google DNS for testing, but an account nonetheless is required.
-
-I wrote this to solve an issue that I had at home, and it ended up saving me $100 USD a year. Thank you, Python! Thank you CS50! 
-
-I have opened sourced this project for all to use.
-
-Furthermore, this is deliberately a one file application. It is designed to be easy to clone and use, hence the open source, and it is designed to be used with a Linux service so that it can run in the background. It can theoretically be run on all platforms, MAC, Windows, Linux, embedded linux devices and home network equipment.
-
-I have tested this on Windows 10, Debian 9 Stretch and Max OSX Mojave.
-
-I've had a hoot taking CS50 Web and am currently working on my final project for CS50 Web.
-
-Cheers,
-
-Conor
-
 # Google Cloud Dynamic DNS Client
 This is a simple dynamic DNS script for Google Cloud DNS. The script will check for its public IP address, and then based on its configuration it read from the configuration file, check whether Google Cloud DNS has a corresponding DNS entry. If no corresponding entry is found, the script will create one. If a corresponding entry is found, but has an IP address which doesn't match that of what the script found, then the script will update then Google Cloud entry (read delete, then create). Finally, if the scripts configuration file matches that of the Google Cloud DNS entry, then it will sleep for an interval of x, and the process repeats.
 
