@@ -1,0 +1,7 @@
+# Default ignored files
+.github/
+.idea/
+.venv/
+ddns.log
+ddns-config.yaml
+ddns-api-key.json

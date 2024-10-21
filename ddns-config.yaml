@@ -1,19 +1,4 @@
 api-key: './ddns-api-key.json'
 logfile: './ddns.log'
 hosts:
-    -   host: 'firewall.example.com.'
-        project_id: 'fluffy-penguin-242411'
-        managed_zone: 'example'
-        domain: 'example.com'
-        ttl: 60
-        interval: 600
-
-    -   host: 'www.example-two.com.'
-        project_id: 'fluffy-penguin-242411'
-        managed_zone: 'example-two'
-        domain: 'example-two.com'
-        ttl: 60
-        interval: 600
-
-
 
