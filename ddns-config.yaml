@@ -1,4 +1,0 @@
-api-key: './ddns-api-key.json'
-logfile: './ddns.log'
-hosts:
-
