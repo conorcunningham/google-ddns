@@ -116,6 +116,7 @@ def main():
                 domain = config_host["domain"]
                 host = config_host["host"]
                 ttl = config_host["ttl"]
+                type = config_host['type']
                 interval = config_host["interval"]
 
                 # confirm that the last character of host is a '.'. This is a google requirement
@@ -131,7 +132,10 @@ def main():
                 # http get request to fetch our public IP address from ipify.org
                 # if it fails for whatever reason, sleep, and go back to the top of the loop
                 try:
-                    ipify_response = requests.get("https://api.ipify.org?format=json")
+                    if type == "A":
+                        ipify_response = requests.get("https://api.ipify.org?format=json")
+                    if type == "AAAA":
+                        ipify_response = requests.get("https://api6.ipify.org?format=json")
                 except requests.exceptions.ConnectionError as exc:
                     logging.error(f"Timed out trying to reach api.ipify.org", exc_info=exc)
                     time.sleep(interval)
@@ -180,7 +184,7 @@ def main():
                 zone = client.zone(managed_zone, domain)
 
                 # build the record set based on our configuration file
-                record_set = {"name": host, "type": "A", "ttl": ttl, "rrdatas": [ip]}
+                record_set = {"name": host, "type": type, "ttl": ttl, "rrdatas": [ip]}
 
                 # attempt to get the DNS information of our host from Google
                 try:
