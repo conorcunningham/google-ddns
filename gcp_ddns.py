@@ -162,7 +162,7 @@ def main():
                 # this is where we build our resource record set and what we will use to call the api
                 # further down in the script.
                 request = service.resourceRecordSets().list(
-                    project=project, managedZone=managed_zone, name=host
+                    project=project, managedZone=managed_zone, name=host, type=type
                 )
 
                 # Use Google's dns.Client to create client object and zone object
