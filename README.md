@@ -4,7 +4,7 @@ This is a simple dynamic DNS script for Google Cloud DNS. The script will check 
 This project consists of the following components:
 
 - **gcloud-ddns.py**: the dynamic dns client script
-- **ddns-conf.yaml**: programs configuration file
+- **ddns-config-example.yaml**: programs configuration file
 - **requirements.txt**: requirements to be installed
 ## Requirements
 This script requires **Python 3.6 or greater**. f-strings are extensively used. Package requirements are listed in [requirements.txt](requirements.txt)
@@ -20,22 +20,24 @@ $ python3 gcloud-ddns.py
 ```
 The script will run in the foreground. I'm going to play around with it and test it to see if it can run reliably as a service.
 ## Configuration file
-The configuration for the script is read from a yaml file. Here are the contents of the example [ddns-conf.yaml](ddns-config.yaml) file
+The configuration for the script is read from a yaml file. Here are the contents of the example [ddns-config-example.yaml](ddns-config-example.yaml) file
 ``` yaml
 api-key: './ddns-api-key.json'
 logfile: './ddns.log'
 hosts:
-    -   host: 'firewall.example.com.'
-        project_id: 'fluffy-penguin-242411'
-        managed_zone: 'example'
+    -   host: 'subdomain.example.com.'
+        project_id: 'example-123456'
+        managed_zone: 'your-zone-name'
         domain: 'example.com'
+        type: 'AAAA'
         ttl: 60
         interval: 600
 
-    -   host: 'www.example-two.com.'
-        project_id: 'fluffy-penguin-242411'
-        managed_zone: 'example-two'
-        domain: 'example-two.com'
+    -   host: 'subdomain.example.com.'
+        project_id: 'example-123456'
+        managed_zone: 'your-zone-name'
+        domain: 'example.com'
+        type: 'AAAA'
         ttl: 60
         interval: 600
 
